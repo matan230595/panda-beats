@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactPlayer from 'react-player';
 import axios from 'axios';
-import { Play, Pause, Search, ListPlus, Plus, Music, Heart, SkipForward, SkipBack, Maximize2, X, Trash2, Volume2 } from 'lucide-react';
+import { Play, Pause, Search, ListPlus, Plus, Music, Heart, SkipForward, SkipBack, Maximize2, X, Volume2 } from 'lucide-react';
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_KEY;
 
@@ -15,39 +15,34 @@ const App = () => {
   const [duration, setDuration] = useState(0);
   const playerRef = useRef(null);
   
-  // מערכת פלייליסטים ומועדפים - נשמר ב-LocalStorage
   const [playlists, setPlaylists] = useState(() => {
-    const saved = localStorage.getItem('beats_pro_data');
-    return saved ? JSON.parse(saved) : { "מועדפים": [], "פלייליסט חדש": [] };
+    const saved = localStorage.getItem('beats_ultra_v1');
+    return saved ? JSON.parse(saved) : { "מועדפים": [] };
   });
   const [activePlaylist, setActivePlaylist] = useState("מועדפים");
 
   useEffect(() => {
-    localStorage.setItem('beats_pro_data', JSON.stringify(playlists));
+    localStorage.setItem('beats_ultra_v1', JSON.stringify(playlists));
   }, [playlists]);
 
-  // פונקציית "שחרור שמע" לאייפון
-  const unlockAudio = () => {
+  // פונקציית זהב לאייפון - חייבים לקרוא לה בלחיצת כפתור
+  const handlePlaySong = (song) => {
+    // יוצר אינטראקציה ראשונית שהאייפון אוהב
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (AudioContext) {
       const ctx = new AudioContext();
       if (ctx.state === 'suspended') ctx.resume();
     }
-  };
-
-  const handlePlaySong = (song) => {
-    unlockAudio();
     setCurrentSong(song);
     setIsPlaying(true);
   };
 
-  // קישור למערכת ההפעלה (Control Center)
   useEffect(() => {
     if (currentSong && 'mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: currentSong.title,
         artist: "Beats AI",
-        artwork: [{ src: currentSong.img, sizes: '512x512', type: 'image/png' }]
+        artwork: [{ src: currentSong.img, sizes: '300x300', type: 'image/png' }]
       });
       navigator.mediaSession.setActionHandler('play', () => setIsPlaying(true));
       navigator.mediaSession.setActionHandler('pause', () => setIsPlaying(false));
@@ -60,25 +55,14 @@ const App = () => {
     if (!query) return;
     try {
       const { data } = await axios.get(`https://www.googleapis.com/youtube/v3/search`, {
-        params: { part: 'snippet', maxResults: 12, q: query, type: 'video', videoCategoryId: '10', key: API_KEY }
+        params: { part: 'snippet', maxResults: 15, q: query, type: 'video', videoCategoryId: '10', key: API_KEY }
       });
       setResults(data.items.map(v => ({
         id: v.id.videoId,
         title: v.snippet.title,
         img: v.snippet.thumbnails.medium.url
       })));
-    } catch (e) { alert("שגיאה בחיפוש. בדוק את המפתח."); }
-  };
-
-  const toggleLike = (song) => {
-    const isLiked = playlists["מועדפים"].some(s => s.id === song.id);
-    let newList;
-    if (isLiked) {
-      newList = playlists["מועדפים"].filter(s => s.id !== song.id);
-    } else {
-      newList = [...playlists["מועדפים"], song];
-    }
-    setPlaylists({ ...playlists, "מועדפים": newList });
+    } catch (e) { console.error(e); }
   };
 
   const handleNext = () => {
@@ -94,153 +78,124 @@ const App = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#0a0a0a] text-zinc-100 font-sans overflow-hidden">
+    <div className="flex h-screen bg-black text-white font-sans overflow-hidden">
       
-      {/* Side Navigation */}
-      <aside className="w-64 bg-black/40 border-l border-white/5 hidden md:flex flex-col p-6">
-        <div className="flex items-center gap-3 mb-10 px-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center animate-pulse">
-            <Music size={18} />
-          </div>
-          <h1 className="text-xl font-black tracking-tighter italic">BEATS AI</h1>
+      {/* Sidebar */}
+      <aside className="w-64 bg-zinc-950 border-l border-white/5 hidden md:flex flex-col p-6">
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center"><Music size={16} /></div>
+          <h1 className="text-xl font-bold tracking-tighter">BEATS AI</h1>
         </div>
-
-        <div className="space-y-6">
-          <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4">הספריה שלך</p>
-            {Object.keys(playlists).map(name => (
-              <button 
-                key={name} 
-                onClick={() => {setActivePlaylist(name); setResults([]);}}
-                className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all ${activePlaylist === name && results.length === 0 ? 'bg-blue-600 text-white shadow-lg' : 'text-zinc-400 hover:bg-white/5'}`}
-              >
-                {name === "מועדפים" ? <Heart size={16} fill={activePlaylist === "מועדפים" ? "white" : "none"}/> : <ListPlus size={16}/>}
-                <span className="text-sm font-medium">{name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        <button onClick={() => {setActivePlaylist("מועדפים"); setResults([]);}} className={`flex items-center gap-3 p-3 rounded-xl mb-2 ${activePlaylist === "מועדפים" ? 'bg-blue-600' : 'hover:bg-white/5'}`}>
+          <Heart size={18} /> מועדפים
+        </button>
       </aside>
 
       {/* Main Container */}
       <div className="flex-1 flex flex-col relative">
-        <header className="p-6 flex justify-center bg-gradient-to-b from-black to-transparent">
-          <div className="relative w-full max-w-xl">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
-            <input 
-              className="w-full bg-zinc-900/80 backdrop-blur-md border border-white/10 rounded-2xl py-3 px-12 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              placeholder="חפש שיר, אמן או פלייליסט..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && searchMusic()}
-            />
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-y-auto p-6 pb-40">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-black">{results.length > 0 ? 'תוצאות חיפוש' : activePlaylist}</h2>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
-            {(results.length > 0 ? results : playlists[activePlaylist]).map((song) => (
-              <div key={song.id} className="group bg-zinc-900/40 p-3 rounded-[24px] hover:bg-zinc-800 transition-all border border-white/5 relative">
-                <div className="relative aspect-square mb-3 overflow-hidden rounded-[18px] shadow-xl">
-                  <img src={song.img} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer" onClick={() => handlePlaySong(song)}>
-                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-2xl scale-75 group-hover:scale-100 transition-transform">
-                      <Play fill="black" size={20} className="ml-1" />
-                    </div>
-                  </div>
-                </div>
-                <div className="text-sm font-bold truncate mb-2">{song.title}</div>
-                <div className="flex justify-between items-center">
-                  <Heart 
-                    size={16} 
-                    onClick={() => toggleLike(song)}
-                    className={`cursor-pointer transition-colors ${playlists["מועדפים"].some(s => s.id === song.id) ? 'text-red-500 fill-red-500' : 'text-zinc-600 hover:text-white'}`} 
-                  />
-                  {results.length > 0 && (
-                    <Plus size={16} className="text-zinc-600 hover:text-blue-500 cursor-pointer" onClick={() => {
-                      const p = prompt("שם הפלייליסט להוספה:", "פלייליסט חדש");
-                      if(p && playlists[p]) setPlaylists({...playlists, [p]: [...playlists[p], song]});
-                    }}/>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </main>
-
-        {/* Pro Player Bar */}
+        
+        {/* נגן הווידאו המינימלי - זה התיקון הקריטי! */}
         {currentSong && (
-          <footer className="fixed bottom-6 left-6 right-6 h-24 bg-zinc-900/90 backdrop-blur-2xl border border-white/10 rounded-[30px] px-6 flex items-center justify-between shadow-2xl z-50">
-            <div className="flex items-center gap-4 w-1/3">
-              <img src={currentSong.img} className={`w-14 h-14 rounded-2xl object-cover shadow-lg ${isPlaying ? 'animate-pulse' : ''}`} />
-              <div className="hidden sm:block">
-                <div className="text-sm font-bold truncate w-40">{currentSong.title}</div>
-                <div className="text-[10px] text-blue-500 font-bold uppercase">מתנגן כעת</div>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center flex-1">
-              <div className="flex items-center gap-8 mb-2">
-                <SkipBack className="text-zinc-400 hover:text-white cursor-pointer transition" onClick={handlePrev} />
-                <button onClick={() => setIsPlaying(!isPlaying)} className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-all">
-                  {isPlaying ? <Pause size={20} fill="black"/> : <Play size={20} fill="black" className="ml-1"/>}
-                </button>
-                <SkipForward className="text-zinc-400 hover:text-white cursor-pointer transition" onClick={handleNext} />
-              </div>
-              <div className="w-full max-w-xs flex items-center gap-3">
-                <span className="text-[9px] text-zinc-500 font-mono">{(played * duration || 0).toFixed(0)}s</span>
-                <div className="flex-1 h-1 bg-white/10 rounded-full relative overflow-hidden">
-                  <div className="absolute top-0 left-0 h-full bg-blue-500" style={{ width: `${played * 100}%` }}></div>
-                </div>
-                <span className="text-[9px] text-zinc-500 font-mono">{(duration || 0).toFixed(0)}s</span>
-              </div>
-            </div>
-
-            <div className="flex justify-end items-center gap-4 w-1/3">
-               <Maximize2 size={18} className="text-zinc-400 cursor-pointer" onClick={() => setIsFocusMode(true)} />
-            </div>
-          </footer>
-        )}
-
-        {/* התיקון הקריטי לאייפון - נגן עם מנגנון שחזור אוטומטי */}
-        {currentSong && (
-          <div className="hidden">
+          <div className="fixed top-2 right-2 z-[60] w-[100px] h-[60px] overflow-hidden rounded-lg shadow-2xl border border-white/20">
             <ReactPlayer 
               ref={playerRef}
               url={`https://www.youtube.com/watch?v=${currentSong.id}`}
               playing={isPlaying}
               volume={1}
               muted={false}
-              playsinline={true}
-              config={{ youtube: { playerVars: { autoplay: 1, playsinline: 1, modestbranding: 1 } } }}
+              playsinline={true} // חשוב ביותר
+              width="100%"
+              height="100%"
+              config={{
+                youtube: {
+                  playerVars: { 
+                    autoplay: 1, 
+                    playsinline: 1,
+                    modestbranding: 1,
+                    controls: 1 // מאפשר לאייפון להבין שזה נגן אמיתי
+                  }
+                }
+              }}
               onProgress={(p) => setPlayed(p.played)}
               onDuration={(d) => setDuration(d)}
               onEnded={handleNext}
+              onBuffer={() => console.log("Buffering...")}
               onPause={() => {
-                // מנגנון שחזור: אם השיר נעצר בגלל ה-iOS, הוא מנסה לנגן שוב מיד
-                if (isPlaying) setTimeout(() => setIsPlaying(true), 100);
+                // מנגנון שמוודא שזה לא עוצר סתם
+                if (isPlaying) setTimeout(() => setIsPlaying(true), 500);
               }}
             />
           </div>
         )}
+
+        <header className="p-6 flex justify-center">
+          <input 
+            className="w-full max-w-xl bg-zinc-900 border border-white/10 rounded-2xl py-3 px-6 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="חפש שיר..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && searchMusic()}
+          />
+        </header>
+
+        <main className="flex-1 overflow-y-auto p-6 pb-40">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+            {(results.length > 0 ? results : playlists[activePlaylist]).map((song) => (
+              <div key={song.id} className="bg-zinc-900/50 p-4 rounded-3xl hover:bg-zinc-800 transition relative group">
+                <img src={song.img} className="w-full aspect-square object-cover rounded-2xl mb-3" />
+                <div className="text-sm font-bold truncate">{song.title}</div>
+                <button onClick={() => handlePlaySong(song)} className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 rounded-3xl transition">
+                  <Play fill="white" size={30} />
+                </button>
+                <Heart 
+                  onClick={() => {
+                    const isLiked = playlists["מועדפים"].some(s => s.id === song.id);
+                    const newList = isLiked ? playlists["מועדפים"].filter(s => s.id !== song.id) : [...playlists["מועדפים"], song];
+                    setPlaylists({...playlists, "מועדפים": newList});
+                  }}
+                  className={`absolute top-6 right-6 ${playlists["מועדפים"].some(s => s.id === song.id) ? 'text-red-500 fill-red-500' : 'text-white/50'}`} 
+                  size={18} 
+                />
+              </div>
+            ))}
+          </div>
+        </main>
+
+        {/* Player Bar */}
+        {currentSong && (
+          <footer className="fixed bottom-6 left-6 right-6 h-20 bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-[25px] px-6 flex items-center justify-between z-50">
+            <div className="flex items-center gap-4 w-1/3">
+              <img src={currentSong.img} className="w-12 h-12 rounded-xl object-cover" />
+              <div className="text-xs font-bold truncate max-w-[150px]">{currentSong.title}</div>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-6">
+                <SkipBack onClick={handlePrev} className="cursor-pointer text-zinc-400" />
+                <button onClick={() => setIsPlaying(!isPlaying)} className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center">
+                  {isPlaying ? <Pause size={20} fill="black"/> : <Play size={20} fill="black" className="ml-1"/>}
+                </button>
+                <SkipForward onClick={handleNext} className="cursor-pointer text-zinc-400" />
+              </div>
+            </div>
+            <div className="w-1/3 flex justify-end">
+               <Maximize2 onClick={() => setIsFocusMode(true)} className="text-zinc-500 cursor-pointer" />
+            </div>
+          </footer>
+        )}
       </div>
 
-      {/* Focus Mode */}
+      {/* Focus Mode Overlay */}
       {isFocusMode && currentSong && (
-        <div className="fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center p-10 animate-in fade-in">
-          <button onClick={() => setIsFocusMode(false)} className="absolute top-10 right-10 text-zinc-500 hover:text-white"><X size={32} /></button>
-          <img src={currentSong.img} className="w-72 h-72 md:w-[450px] md:h-[450px] object-cover rounded-[60px] shadow-[0_0_100px_rgba(59,130,246,0.3)] mb-10" />
-          <h2 className="text-3xl md:text-5xl font-black text-center mb-6">{currentSong.title}</h2>
-          <div className="flex items-center gap-10">
-             <SkipBack size={32} onClick={handlePrev} className="cursor-pointer" />
-             <button onClick={() => setIsPlaying(!isPlaying)} className="w-20 h-20 bg-white text-black rounded-full flex items-center justify-center shadow-2xl">
-                {isPlaying ? <Pause size={30} fill="black"/> : <Play size={30} fill="black" className="ml-1"/>}
-             </button>
-             <SkipForward size={32} onClick={handleNext} className="cursor-pointer" />
+        <div className="fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center p-6">
+          <button onClick={() => setIsFocusMode(false)} className="absolute top-8 right-8 text-zinc-500"><X size={32} /></button>
+          <img src={currentSong.img} className="w-72 h-72 object-cover rounded-[50px] shadow-2xl mb-10" />
+          <h2 className="text-2xl font-bold text-center mb-10 px-4">{currentSong.title}</h2>
+          <div className="flex items-center gap-12">
+            <SkipBack size={32} onClick={handlePrev} />
+            <button onClick={() => setIsPlaying(!isPlaying)} className="w-20 h-20 bg-white text-black rounded-full flex items-center justify-center">
+              {isPlaying ? <Pause size={40} fill="black"/> : <Play size={40} fill="black" className="ml-1"/>}
+            </button>
+            <SkipForward size={32} onClick={handleNext} />
           </div>
         </div>
       )}
